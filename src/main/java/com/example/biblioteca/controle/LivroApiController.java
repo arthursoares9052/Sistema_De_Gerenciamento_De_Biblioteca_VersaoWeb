@@ -22,7 +22,12 @@ public class LivroApiController {
 
     @GetMapping
     public List<Livro> listar() {
-        return livroServico.listar();
+        try {
+            return livroServico.listar();
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Erro ao listar livros: " + e.getMessage());
+        }
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -32,24 +37,33 @@ public class LivroApiController {
             @RequestParam(required = false) String genero,
             @RequestParam(required = false) String dataPublicacao,
             @RequestParam MultipartFile pdf
-    ) throws Exception {
+    ) {
+        try {
+            Livro livro = new Livro();
+            livro.setTitulo(titulo);
+            livro.setAutor(autor);
+            livro.setGenero(genero);
 
-        Livro livro = new Livro();
-        livro.setTitulo(titulo);
-        livro.setAutor(autor);
-        livro.setGenero(genero);
+            if (dataPublicacao != null && !dataPublicacao.isBlank()) {
+                livro.setDataPublicacao(LocalDate.parse(dataPublicacao));
+            }
 
-        if (dataPublicacao != null && !dataPublicacao.isBlank()) {
-            livro.setDataPublicacao(LocalDate.parse(dataPublicacao));
+            livro.setPdf(pdf.getBytes());
+
+            return livroServico.inserir(livro);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Erro ao inserir livro: " + e.getMessage());
         }
-
-        livro.setPdf(pdf.getBytes());
-
-        return livroServico.inserir(livro);
     }
 
     @DeleteMapping("/{id}")
     public void excluir(@PathVariable Integer id) {
-        livroServico.excluir(id);
+        try {
+            livroServico.excluir(id);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Erro ao excluir livro: " + e.getMessage());
+        }
     }
 }

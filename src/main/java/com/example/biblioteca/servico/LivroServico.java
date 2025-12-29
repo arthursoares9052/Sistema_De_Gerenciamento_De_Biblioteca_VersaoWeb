@@ -19,6 +19,16 @@ public class LivroServico {
 
     @Transactional
     public Livro inserir(Livro livro) {
+        boolean existe = livroRepository.findAll().stream()
+                .anyMatch(l ->
+                        l.getTitulo().equalsIgnoreCase(livro.getTitulo()) &&
+                        l.getAutor().equalsIgnoreCase(livro.getAutor())
+                );
+
+        if (existe) {
+            throw new IllegalArgumentException("Livro já existe");
+        }
+
         return livroRepository.save(livro);
     }
 

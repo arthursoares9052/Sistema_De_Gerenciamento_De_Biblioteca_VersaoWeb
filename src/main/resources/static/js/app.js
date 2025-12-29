@@ -1,15 +1,13 @@
 let selecionado = null;
 let linhaSelecionada = null;
 
-const API_KEY = "I_Love_Milfs";
-
 const tituloInput = document.getElementById("tituloInput");
 const autorInput = document.getElementById("autorInput");
 const generoInput = document.getElementById("generoInput");
 const dataInput = document.getElementById("dataInput");
 const pdfInput = document.getElementById("pdfInput");
 
-// máscara da data (dd/MM/yyyy – máx 8 números)
+// máscara da data
 document.addEventListener("input", function (e) {
   if (e.target.id === "dataInput") {
     let v = e.target.value.replace(/\D/g, "").substring(0, 8);
@@ -21,8 +19,10 @@ document.addEventListener("input", function (e) {
 
 function toISO(ddmmyyyy) {
   if (!/^\d{2}\/\d{2}\/\d{4}$/.test(ddmmyyyy)) return null;
-  const [d, m, y] = ddmmyyyy.split("/");
-  return `${y}-${m}-${d}`;
+  const [d,m,y] = ddmmyyyy.split("/").map(Number);
+  const date = new Date(y, m - 1, d);
+  if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) return null;
+  return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 }
 
 function inserir() {
@@ -34,7 +34,7 @@ function inserir() {
 
   const iso = toISO(data);
   if (!titulo || !autor || !iso || !pdf) {
-    alert("Campos inválidos");
+    alert("Campos inválidos ou data impossível");
     return;
   }
 
@@ -45,44 +45,33 @@ function inserir() {
   form.append("dataPublicacao", iso);
   form.append("pdf", pdf);
 
-  fetch("/api/livros", {
-    method: "POST",
-    headers: {
-      "X-API-KEY": API_KEY
-    },
-    body: form
-  })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error("Erro HTTP: " + response.status);
-    }
-    return response.json();
-  })
-  .then(() => {
-    location.href = "/listar";
-  })
-  .catch(err => {
-    console.error(err);
-    alert("Erro ao inserir livro");
-  });
+  fetch("/api/livros", { method:"POST", body:form })
+    .then(res => {
+      if(!res.ok) return res.text().then(text => { throw new Error(text) });
+      return res.json();
+    })
+    .then(() => {
+      alert(`Livro "${titulo}" cadastrado com sucesso!`);
+      tituloInput.value = "";
+      autorInput.value = "";
+      generoInput.value = "";
+      dataInput.value = "";
+      pdfInput.value = "";
+      carregar();
+    })
+    .catch(e => alert("Erro ao inserir: " + e.message));
 }
 
 function carregar() {
-  fetch("/api/livros", {
-    method: "GET",
-    headers: {
-      "X-API-KEY": API_KEY,
-      "Accept": "application/json"
-    }
-  })
-    .then(r => {
-      if (!r.ok) throw new Error("Erro HTTP: " + r.status);
-      return r.json();
+  fetch("/api/livros")
+    .then(res => {
+      if(!res.ok) return res.text().then(text => { throw new Error(text) });
+      return res.json();
     })
     .then(livros => {
       const tabela = document.getElementById("tabelaLivros");
+      if (!tabela) return;
       tabela.innerHTML = "";
-
       livros.forEach(l => {
         const tr = document.createElement("tr");
         tr.onclick = () => selecionar(tr, l.id);
@@ -96,10 +85,7 @@ function carregar() {
         tabela.appendChild(tr);
       });
     })
-    .catch(err => {
-      console.error(err);
-      alert("Erro ao carregar livros");
-    });
+    .catch(e => console.error("Erro ao listar livros:", e.message));
 }
 
 function selecionar(tr, id) {
@@ -115,20 +101,12 @@ function excluir() {
     return;
   }
 
-  fetch(`/api/livros/${selecionado}`, {
-    method: "DELETE",
-    headers: {
-      "X-API-KEY": API_KEY
-    }
-  })
-    .then(response => {
-      if (!response.ok) throw new Error("Erro ao excluir");
+  fetch(`/api/livros/${selecionado}`, { method:"DELETE" })
+    .then(() => {
+      alert("Livro excluído com sucesso!");
       carregar();
     })
-    .catch(err => {
-      console.error(err);
-      alert("Erro ao excluir livro");
-    });
+    .catch(e => alert("Erro ao excluir: " + e.message));
 }
 
 if (document.getElementById("tabelaLivros")) {
